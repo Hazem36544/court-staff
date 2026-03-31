@@ -18,14 +18,14 @@ import { FamiliesManagement } from './components/employee/FamiliesManagement';
 import { FamilyDetailsScreen } from './components/employee/FamilyDetailsScreen';
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem('wesal_token'));
+  // ✅ التعديل: الاعتماد على توكن الموظف فقط
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem('wesal_staff_token'));
 
-  // Role reading with error protection
+  // ✅ التعديل: قراءة الصلاحية والبيانات من مفاتيح الموظف المعزولة
   const [userRole, setUserRole] = useState(() => {
     try {
-      const savedData = localStorage.getItem('wesal_user_data');
-      // بما إن ده تطبيق الموظف، ممكن نعتمد على wesal_user_role اللي سجلناه في اللوج إن
-      const savedRole = localStorage.getItem('wesal_user_role'); 
+      const savedData = localStorage.getItem('wesal_staff_user_data');
+      const savedRole = localStorage.getItem('wesal_staff_user_role'); 
       return savedRole || (savedData ? JSON.parse(savedData).role : null);
     } catch (e) {
       console.error("Error reading data:", e);
@@ -33,7 +33,8 @@ export default function App() {
     }
   });
 
-  const [currentScreen, setCurrentScreen] = useState(() => localStorage.getItem('current_screen') || 'home');
+  // ✅ التعديل: عزل الشاشة الحالية لتجنب التداخل مع الأنظمة الأخرى
+  const [currentScreen, setCurrentScreen] = useState(() => localStorage.getItem('wesal_staff_current_screen') || 'home');
   const [screenData, setScreenData] = useState(null);
 
   // --- Login Handler ---
@@ -42,13 +43,14 @@ export default function App() {
     setIsLoggedIn(true);
     setUserRole(role);
 
-    const existingData = localStorage.getItem('wesal_user_data');
+    // ✅ التعديل: حفظ البيانات في مفتاح الموظف
+    const existingData = localStorage.getItem('wesal_staff_user_data');
     let userData = existingData ? JSON.parse(existingData) : {};
     userData.role = role;
-    localStorage.setItem('wesal_user_data', JSON.stringify(userData));
+    localStorage.setItem('wesal_staff_user_data', JSON.stringify(userData));
 
     setCurrentScreen('home');
-    localStorage.setItem('current_screen', 'home');
+    localStorage.setItem('wesal_staff_current_screen', 'home');
   };
 
   const handleLogout = () => {
@@ -58,17 +60,19 @@ export default function App() {
     setCurrentScreen('home');
     setScreenData(null);
 
-    localStorage.removeItem('wesal_token');
-    localStorage.removeItem('wesal_user_data');
-    localStorage.removeItem('wesal_user_role');
-    localStorage.removeItem('current_screen');
+    // ✅ التعديل: تنظيف شامل لمفاتيح الموظف فقط
+    localStorage.removeItem('wesal_staff_token');
+    localStorage.removeItem('wesal_staff_user_data');
+    localStorage.removeItem('wesal_staff_user_role');
+    localStorage.removeItem('wesal_staff_current_screen');
+    localStorage.removeItem('force_change_password');
   };
 
   const handleNavigate = (screen, data) => {
     console.log("Navigating to:", screen);
     setCurrentScreen(screen);
     setScreenData(data);
-    localStorage.setItem('current_screen', screen);
+    localStorage.setItem('wesal_staff_current_screen', screen);
   };
 
   const handleBack = () => {
@@ -98,15 +102,6 @@ export default function App() {
                 onSave={() => handleNavigate(screenData ? 'families-management' : 'home')}
               />
             )}
-
-            {/* تم إيقاف هذه الشاشة مؤقتاً لعدم وجود استيراد لها 
-            {currentScreen === 'edit-family' && (
-              <EditFamilyScreen
-                familyId={screenData?.familyId}
-                onBack={() => handleNavigate('families-management')}
-              />
-            )}
-            */}
 
             {currentScreen === 'families-management' && <FamiliesManagement onNavigate={handleNavigate} onBack={handleBack} />}
 

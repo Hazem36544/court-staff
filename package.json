@@ -1,9 +1,9 @@
 {
-  "name": "family-court-system",
+  "name": "court-staff",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://Hazem36544.github.io/family-court-system/",
+  "homepage": "https://Hazem36544.github.io/court-staff/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

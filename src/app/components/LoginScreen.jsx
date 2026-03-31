@@ -3,7 +3,7 @@ import { Eye, EyeOff, Loader2, Lock, ShieldCheck, AlertCircle } from 'lucide-rea
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { authAPI } from '../../services/api';
-import { toast } from 'react-hot-toast'; // تأكد إن المكتبة دي متسطبة عندك
+import { toast } from 'react-hot-toast';
 
 export function LoginScreen({ onLogin }) {
   const [step, setStep] = useState('login');
@@ -20,12 +20,18 @@ export function LoginScreen({ onLogin }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // التقاط أمر التغيير الإجباري لو كان موجود مسبقاً
+  // ✅ التعديل هنا: التقاط أمر التغيير الإجباري أو تنظيف متصفح خاص بنظام الموظف فقط
   useEffect(() => {
     if (localStorage.getItem('force_change_password') === 'true') {
       setStep('change_password');
       setPassword('');
       setError('يرجى تغيير كلمة المرور المؤقتة قبل الدخول للداشبورد');
+    } else {
+      // مسح مفاتيح موظف المحكمة فقط، وترك مفاتيح الأنظمة الأخرى في حالها
+      localStorage.removeItem('wesal_staff_token');
+      localStorage.removeItem('wesal_staff_user_data');
+      localStorage.removeItem('wesal_staff_user_role');
+      localStorage.removeItem('wesal_staff_current_screen');
     }
   }, []);
 
@@ -38,6 +44,12 @@ export function LoginScreen({ onLogin }) {
 
     setIsLoading(true);
     setError('');
+
+    // ✅ تنظيف إضافي لمفاتيح الموظف قبل محاولة الدخول الجديدة
+    localStorage.removeItem('wesal_staff_token');
+    localStorage.removeItem('wesal_staff_user_data');
+    localStorage.removeItem('wesal_staff_user_role');
+    localStorage.removeItem('force_change_password');
 
     try {
       console.log("Attempting to login as Court Staff...");
@@ -52,10 +64,22 @@ export function LoginScreen({ onLogin }) {
       if (response.data && response.data.token) {
         let isTempPassword = false;
 
-        // فك التوكن لمعرفة حالة الباسورد (مؤقت أم لا)
+        // ✅ التعديل هنا: فك التوكن بمعالجة الـ Padding لتجنب خطأ atob
         try {
-          const payload = JSON.parse(atob(response.data.token.split('.')[1]));
-          if (payload.tmp_pwd === "True" || payload.tmp_pwd === true) {
+          const base64Url = response.data.token.split('.')[1];
+          let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          
+          while (base64.length % 4 !== 0) {
+            base64 += '=';
+          }
+
+          const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+
+          const payload = JSON.parse(jsonPayload);
+          
+          if (payload.tmp_pwd === "True" || payload.tmp_pwd === true || payload.tmp_pwd === "true") {
             isTempPassword = true;
           }
         } catch (e) {
@@ -63,19 +87,18 @@ export function LoginScreen({ onLogin }) {
         }
 
         if (isTempPassword) {
-          // لو مؤقت: نمنع الدخول ونفتح شاشة التغيير
+          // لو مؤقت: نحفظ التوكن المؤقت باسم الموظف ونفتح شاشة التغيير
           localStorage.setItem('force_change_password', 'true');
-          // بنحفظ التوكن مؤقتاً علشان لو محتاجينه في عملية تغيير الباسورد كـ Bearer
-          localStorage.setItem('wesal_token', response.data.token); 
+          localStorage.setItem('wesal_staff_token', response.data.token); 
           setStep('change_password');
           toast('يجب تأمين حسابك بكلمة مرور جديدة قبل الدخول', { icon: '🔒', duration: 4000 });
         } else {
-          // لو سليم: ندخل للداشبورد بأمان
-          localStorage.setItem('wesal_token', response.data.token);
+          // ✅ لو سليم: نحفظ البيانات والتوكن بالأسماء الجديدة
+          localStorage.setItem('wesal_staff_token', response.data.token);
           if (response.data.user) {
-            localStorage.setItem('wesal_user_data', JSON.stringify(response.data.user));
+            localStorage.setItem('wesal_staff_user_data', JSON.stringify(response.data.user));
           }
-          localStorage.setItem('wesal_user_role', 'employee'); // حفظ الصلاحية
+          localStorage.setItem('wesal_staff_user_role', 'employee'); 
 
           console.log("Login successful - Received token");
           onLogin('employee');
@@ -86,12 +109,11 @@ export function LoginScreen({ onLogin }) {
 
     } catch (err) {
       console.error("Login Error:", err);
-      localStorage.removeItem('wesal_token');
+      localStorage.removeItem('wesal_staff_token');
 
       if (err.response) {
         const errorMsg = err.response.data?.detail || err.response.data?.title || "";
 
-        // التعامل مع رفض الباك إند بسبب الباسورد المؤقت (لو الباك إند بيرجع 403)
         if (err.response.status === 403 && (errorMsg.toLowerCase().includes("temporary password") || errorMsg.includes("تغيير كلمة المرور"))) {
           setStep('change_password');
           setError('');
@@ -142,7 +164,8 @@ export function LoginScreen({ onLogin }) {
 
       toast.success("تم تأمين الحساب بنجاح! يرجى تسجيل الدخول بالبيانات الجديدة.");
       localStorage.removeItem("force_change_password");
-      localStorage.removeItem("wesal_token"); // مسح التوكن علشان يسجل دخول نضيف
+      // ✅ مسح التوكن المؤقت الخاص بالموظف
+      localStorage.removeItem("wesal_staff_token"); 
       
       // الرجوع لشاشة اللوج إن
       setTimeout(() => {
