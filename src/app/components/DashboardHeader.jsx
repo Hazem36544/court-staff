@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, User } from 'lucide-react';
 
 const DashboardHeader = ({ title, subtitle, onBack }) => {
-  // Restore saved user data upon entry
+  // ✅ التعديل هنا: القراءة من sessionStorage واستخدام مفتاح الموظف الجديد كأولوية
   const [userData, setUserData] = useState(() => {
-    const saved = localStorage.getItem('wesal_user_data');
+    const saved = sessionStorage.getItem('wesal_staff_user_data') || sessionStorage.getItem('wesal_user_data');
     return saved ? JSON.parse(saved) : null;
   });
 
@@ -18,7 +18,7 @@ const DashboardHeader = ({ title, subtitle, onBack }) => {
           {/* Back button linked to App.jsx */}
           <button
             onClick={onBack}
-            className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all hover:scale-105 active:scale-95"
+            className="p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all hover:scale-105 active:scale-95 border-none"
             aria-label="Back"
           >
             <ChevronLeft className="w-6 h-6 text-white" />
@@ -40,9 +40,10 @@ const DashboardHeader = ({ title, subtitle, onBack }) => {
           <div className="hidden sm:flex items-center gap-3 bg-white/10 px-4 py-2 rounded-2xl border border-white/10">
             <div className="text-left">
               <p className="text-xs text-blue-200">Welcome,</p>
-              <p className="text-sm font-bold">{userData.name}</p>
+              {/* ✅ التعديل هنا: محاولة عرض fullName لو موجودة، أو name كبديل */}
+              <p className="text-sm font-bold">{userData.fullName || userData.name || 'موظف'}</p>
             </div>
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shadow-inner">
               <User className="w-6 h-6 text-white" />
             </div>
           </div>
