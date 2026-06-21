@@ -1,1 +1,0 @@
-import{ae as e,af as t,j as o}from"./vendor-CJ2fH7Dl.js";function s(...r){return e(t(r))}function d({className:r,...a}){return o.jsx("div",{"data-slot":"card",className:s("bg-card text-card-foreground flex flex-col gap-6 rounded-xl border",r),...a})}export{d as C,s as c};
